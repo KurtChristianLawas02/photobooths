@@ -9,7 +9,7 @@ import type { TemplateOption } from './types';
 import { renderTemplate } from './services/renderService';
 import { TemplateEditor } from './components/TemplateEditor';
 import { AuthScreen } from './components/AuthScreen';
-import { supabase } from './utils/supabase';
+import { isSupabaseConfigured, supabase, supabaseConfigMessage } from './utils/supabase';
 
 const workflowSteps = ['Event', 'Camera', 'Capture', 'Review', 'Print'];
 
@@ -190,6 +190,11 @@ function App() {
     let isCurrent = true;
 
     const restoreSession = async () => {
+      if (!isSupabaseConfigured) {
+        setAuthLoading(false);
+        return;
+      }
+
       const { data } = await supabase.auth.getSession();
       if (isCurrent) {
         setSession(data.session);
@@ -221,6 +226,10 @@ function App() {
     let isCurrent = true;
 
     const loadSupabaseTemplates = async () => {
+      if (!isSupabaseConfigured) {
+        return;
+      }
+
       const { data, error } = await supabase.from('templates').select('*').eq('active', true);
       if (error || !data?.length || !isCurrent) {
         return;
@@ -424,8 +433,8 @@ function App() {
     setShowSettings(false);
   };
 
-  if (authLoading || !session) {
-    return <AuthScreen loading={authLoading} />;
+  if (authLoading || !session || !isSupabaseConfigured) {
+    return <AuthScreen loading={authLoading} configError={isSupabaseConfigured ? null : supabaseConfigMessage} />;
   }
 
   return (

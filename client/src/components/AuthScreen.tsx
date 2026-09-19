@@ -5,9 +5,10 @@ import { supabase } from '../utils/supabase';
 
 interface AuthScreenProps {
   loading?: boolean;
+  configError?: string | null;
 }
 
-export function AuthScreen({ loading = false }: AuthScreenProps) {
+export function AuthScreen({ loading = false, configError = null }: AuthScreenProps) {
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,9 +50,10 @@ export function AuthScreen({ loading = false }: AuthScreenProps) {
         <form className="auth-form" onSubmit={submit}>
           <label className="setting-field">Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label>
           <label className="setting-field">Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'} minLength={6} required /></label>
+          {configError && <div className="error-box" role="alert">{configError}</div>}
           {error && <div className="error-box" role="alert">{error}</div>}
           {message && <div className="success-box" role="status">{message}</div>}
-          <button className="primary-button auth-submit" type="submit" disabled={loading || isSubmitting}>
+          <button className="primary-button auth-submit" type="submit" disabled={loading || isSubmitting || Boolean(configError)}>
             {isSubmitting ? 'Please wait...' : mode === 'sign-in' ? 'Sign in' : 'Create account'} <ArrowRight size={19} />
           </button>
         </form>

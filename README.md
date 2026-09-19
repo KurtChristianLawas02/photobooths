@@ -69,6 +69,9 @@ The build command is:
 npm run build
 ```
 
+Authentication requires `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. Add both variables to Vercel Project Settings > Environment Variables for Production, then redeploy because Vite embeds `VITE_` variables at build time. Use only the public publishable key in the browser, never a Supabase service-role key.
+
+If a deployment URL shows `DEPLOYMENT_NOT_FOUND`, that specific Vercel deployment is no longer available. Open the latest successful deployment URL after pushing the fix.
 This builds `shared` before the client and server, which is required because both workspaces import `@photobooth/shared` from its generated `dist` directory. The Express API is a separate long-running service and should be deployed separately, then configured through `VITE_API_URL` and `CLIENT_URL`. The Vercel client deployment by itself cannot run the local Express listener or provide durable PostgreSQL/photo storage.
 
 Default admin login:
