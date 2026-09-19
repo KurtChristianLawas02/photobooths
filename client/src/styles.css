@@ -85,6 +85,8 @@ h1 em { color: #d5c28b; font-family: 'Playfair Display', serif; font-weight: 600
 .session-topline, .review-header { display: flex; justify-content: space-between; align-items: center; color: #d7d2c6; font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .08em; font-size: 11px; }
 .session-panel { margin-top: 18px; padding: 18px; border-radius: 20px; background: rgba(8,11,10,.42); border: 1px solid rgba(255,255,255,.08); }
 .session-preview-wrapper { position: relative; overflow: hidden; aspect-ratio: 4 / 3; background: linear-gradient(145deg, #2b322c, #151a16); border-radius: 12px; }
+.session-camera-toggle { position: absolute; top: 12px; right: 12px; z-index: 2; width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid rgba(236,232,219,.26); border-radius: 50%; background: rgba(10, 13, 10, 0.6); color: #f2efe8; box-shadow: 0 10px 22px rgba(0,0,0,.2); }
+.session-camera-toggle:hover { background: rgba(213,194,139,.18); border-color: rgba(213,194,139,.6); }
 .countdown-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(7,8,7,.24); }
 .countdown-badge { width: 150px; height: 150px; display: grid; place-items: center; background: rgba(213,194,139,.12); border: 1px solid rgba(213,194,139,.35); border-radius: 50%; font-size: 72px; font-weight: 800; color: #f5ebcf; }
 .session-actions, .review-actions, .final-actions { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin-top: 22px; }
@@ -202,6 +204,7 @@ h1 em { color: #d5c28b; font-family: 'Playfair Display', serif; font-weight: 600
   .modal-backdrop { padding: 12px; }
   .review-grid { grid-template-columns: 1fr; }
   .countdown-badge { width: 120px; height: 120px; font-size: 52px; }
+  .session-camera-toggle { width: 36px; height: 36px; top: 10px; right: 10px; }
   .layout-preview { aspect-ratio: 1 / 1.15; }
   .layout-preview-title { font-size: 6px; }
   .layout-preview-footer { font-size: 6px; }

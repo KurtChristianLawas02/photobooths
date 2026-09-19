@@ -436,6 +436,14 @@ function App() {
     await ensureCamera(undefined, 'environment');
   };
 
+  const toggleCameraFacing = async () => {
+    const nextFacingMode = cameraFacingMode === 'user' ? 'environment' : 'user';
+    setCameraFacingMode(nextFacingMode);
+    setSelectedDeviceId('');
+    stopCamera();
+    await ensureCamera(undefined, nextFacingMode);
+  };
+
   const takePhoto = async () => {
     if (!videoRef.current || isCapturing || !activeTemplate || (!retakePhotoId && photos.length >= activeTemplate.requiredPhotos)) {
       return;
@@ -654,6 +662,14 @@ function App() {
           <div className="session-panel">
             <div className="session-preview-wrapper">
               <video ref={videoRef} autoPlay playsInline muted className="capture-video" />
+              <button
+                type="button"
+                className="session-camera-toggle"
+                aria-label={cameraFacingMode === 'user' ? 'Use back camera' : 'Use front camera'}
+                onClick={() => void toggleCameraFacing()}
+              >
+                <RefreshCcw size={18} />
+              </button>
               {countdown > 0 && (
                 <div className="countdown-overlay">
                   <div className="countdown-badge">{countdown}</div>
