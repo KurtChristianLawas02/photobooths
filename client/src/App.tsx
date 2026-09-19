@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { PRINT_SIZES, type Orientation, type PrintSizeId, type PrintTemplate } from '@photobooth/shared';
+import { PRINT_SIZES, type Orientation, type PhotoSlot, type PrintSizeId, type PrintTemplate } from '@photobooth/shared';
 import { Camera, CheckCheck, ChevronRight, Download, ImageIcon, LogOut, Maximize, Printer, RefreshCcw, Settings2, Sparkles, TimerReset } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
 import QRCode from 'qrcode';
@@ -27,79 +27,208 @@ const photoStyles = [
 
 type PhotoStyle = (typeof photoStyles)[number];
 
-function PhotoLayout({ photos, style, compact = false, copies = 1 }: { photos: Array<{ id: string; dataUrl: string }>; style: PhotoStyle; compact?: boolean; copies?: number }) {
+function slot(id: string, x: number, y: number, width: number, height: number, photoIndex: number): PhotoSlot {
+  return { id, type: 'photo', x, y, width, height, fit: 'cover', photoIndex };
+}
+
+function createTemplate(
+  id: string,
+  name: string,
+  description: string,
+  printSize: PrintSizeId,
+  orientation: Orientation,
+  requiredPhotos: number,
+  slots: PhotoSlot[],
+): TemplateOption {
+  const size = PRINT_SIZES[printSize];
+  const widthPixels = orientation === 'portrait' ? size.widthPixels : size.heightPixels;
+  const heightPixels = orientation === 'portrait' ? size.heightPixels : size.widthPixels;
+  const physicalWidth = orientation === 'portrait' ? size.widthInches : size.heightInches;
+  const physicalHeight = orientation === 'portrait' ? size.heightInches : size.widthInches;
+  const aspectRatio = orientation === 'portrait' ? size.aspectRatio : `${size.heightInches}:${size.widthInches}`;
+
+  return {
+    id,
+    name,
+    description,
+    printSize,
+    physicalWidth,
+    physicalHeight,
+    widthPixels,
+    heightPixels,
+    dpi: 300,
+    orientation,
+    aspectRatio,
+    background: '#050505',
+    requiredPhotos,
+    isActive: true,
+    slots,
+  };
+}
+
+const layoutTemplates: TemplateOption[] = [
+  createTemplate('layout-a', 'Layout A', 'Size: 6x2 strip, 3 poses', '2x6', 'portrait', 3, [
+    slot('a-1', 110, 300, 980, 820, 0),
+    slot('a-2', 110, 1215, 980, 820, 1),
+    slot('a-3', 110, 2130, 980, 820, 2),
+  ]),
+  createTemplate('layout-b', 'Layout B', 'Size: 6x2 strip, 3 poses', '2x6', 'portrait', 3, [
+    slot('b-1', 110, 430, 980, 760, 0),
+    slot('b-2', 110, 1280, 980, 760, 1),
+    slot('b-3', 110, 2130, 980, 760, 2),
+  ]),
+  createTemplate('layout-c', 'Layout C', 'Size: 6x2 strip, 4 poses', '2x6', 'portrait', 4, [
+    slot('c-1', 95, 250, 1010, 700, 0),
+    slot('c-2', 95, 1035, 1010, 700, 1),
+    slot('c-3', 95, 1820, 1010, 700, 2),
+    slot('c-4', 95, 2605, 1010, 700, 3),
+  ]),
+  createTemplate('layout-d', 'Layout D', 'Size: 6x2 strip, 4 poses', '2x6', 'portrait', 4, [
+    slot('d-1', 95, 380, 1010, 660, 0),
+    slot('d-2', 95, 1115, 1010, 660, 1),
+    slot('d-3', 95, 1850, 1010, 660, 2),
+    slot('d-4', 95, 2585, 1010, 660, 3),
+  ]),
+  createTemplate('layout-e', 'Layout E', 'Size: 6x4 4R, 4 poses', '4x6', 'landscape', 4, [
+    slot('e-1', 180, 180, 1580, 1420, 0),
+    slot('e-2', 180, 1660, 760, 500, 1),
+    slot('e-3', 1000, 1660, 760, 500, 2),
+    slot('e-4', 2350, 1050, 1040, 1110, 3),
+  ]),
+  createTemplate('layout-f', 'Layout F', 'Size: 6x4 4R, 4 poses', '4x6', 'landscape', 4, [
+    slot('f-1', 180, 240, 1580, 890, 0),
+    slot('f-2', 1840, 240, 1580, 890, 1),
+    slot('f-3', 180, 1210, 1580, 890, 2),
+    slot('f-4', 1840, 1210, 1580, 890, 3),
+  ]),
+  createTemplate('layout-g', 'Layout G', 'Size: 6x4 4R, 3 poses', '4x6', 'landscape', 3, [
+    slot('g-1', 180, 180, 1540, 850, 0),
+    slot('g-2', 1880, 180, 1540, 850, 1),
+    slot('g-3', 180, 1090, 1540, 1010, 2),
+  ]),
+  createTemplate('layout-h', 'Layout H', 'Size: 6x4 4R, 3 poses', '4x6', 'landscape', 3, [
+    slot('h-1', 180, 180, 1540, 850, 0),
+    slot('h-2', 180, 1090, 1540, 1010, 1),
+    slot('h-3', 1880, 1090, 1540, 1010, 2),
+  ]),
+  createTemplate('layout-i', 'Layout I', 'Size: 6x4 4R, 2 poses', '4x6', 'landscape', 2, [
+    slot('i-1', 180, 180, 1320, 890, 0),
+    slot('i-2', 180, 1120, 1320, 900, 1),
+  ]),
+  createTemplate('layout-j', 'Layout J', 'Size: 6x4 4R, 2 poses', '4x6', 'landscape', 2, [
+    slot('j-1', 180, 600, 1540, 990, 0),
+    slot('j-2', 1880, 600, 1540, 990, 1),
+  ]),
+  createTemplate('layout-k', 'Layout K', 'Size: 6x4 4R, 2 poses', '4x6', 'portrait', 2, [
+    slot('k-1', 260, 260, 1880, 1420, 0),
+    slot('k-2', 260, 1860, 1880, 1420, 1),
+  ]),
+  createTemplate('layout-l', 'Layout L', 'Size: 6x4 4R, 1 pose', '4x6', 'landscape', 1, [
+    slot('l-1', 180, 180, 3240, 1680, 0),
+  ]),
+  createTemplate('layout-m', 'Layout M', 'Size: 6x4 4R, 4 poses', '4x6', 'portrait', 4, [
+    slot('m-1', 260, 240, 1760, 980, 0),
+    slot('m-2', 260, 1340, 1760, 980, 1),
+    slot('m-3', 260, 2440, 1760, 980, 2),
+    slot('m-4', 260, 3540, 1760, 980, 3),
+  ]),
+  createTemplate('layout-n', 'Layout N', 'Size: 6x4 4R, 3 poses', '4x6', 'portrait', 3, [
+    slot('n-1', 260, 260, 1900, 1120, 0),
+    slot('n-2', 260, 1540, 1900, 1120, 1),
+    slot('n-3', 260, 2820, 1900, 1120, 2),
+  ]),
+  createTemplate('layout-o', 'Layout O', 'Size: 6x4 4R, 3 poses', '4x6', 'landscape', 3, [
+    slot('o-1', 180, 200, 1250, 1240, 0),
+    slot('o-2', 1500, 200, 1250, 1240, 1),
+    slot('o-3', 920, 1500, 1850, 1080, 2),
+  ]),
+  createTemplate('layout-p', 'Layout P', 'Size: 6x4 4R, 2 poses', '4x6', 'portrait', 2, [
+    slot('p-1', 290, 350, 1780, 1700, 0),
+    slot('p-2', 290, 2170, 1780, 1700, 1),
+  ]),
+];
+
+const templateSeed: TemplateOption[] = layoutTemplates;
+
+function createPortraitStripSlots(widthPixels: number, heightPixels: number, photoCount: number, rows: number): PhotoSlot[] {
+  const columns = Math.max(1, Math.ceil(photoCount / Math.max(1, rows)));
+  const marginX = widthPixels * 0.08;
+  const marginY = heightPixels * 0.08;
+  const usableWidth = widthPixels - marginX * 2;
+  const usableHeight = heightPixels - marginY * 2;
+  const slotWidth = usableWidth / columns;
+  const slotHeight = usableHeight / Math.max(1, rows);
+
+  return Array.from({ length: photoCount }, (_, index) => {
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+
+    return {
+      id: `portrait-slot-${index + 1}`,
+      type: 'photo',
+      x: marginX + column * slotWidth + slotWidth * 0.08,
+      y: marginY + row * slotHeight + slotHeight * 0.08,
+      width: slotWidth * 0.84,
+      height: slotHeight * 0.84,
+      fit: 'cover',
+      photoIndex: index,
+    };
+  });
+}
+
+function PhotoLayout({ photos, style, copies = 1, compact = false }: { photos: Array<{ id: string; dataUrl: string }>; style: (typeof photoStyles)[number]; copies?: number; compact?: boolean }) {
+  const previewPhotos = photos.length > 0 ? photos : [{ id: 'placeholder', dataUrl: '' }];
+
   return (
-    <div className={`photo-layout layout-${style.layout} ${compact ? 'compact' : ''}`}>
-      <div className="layout-title">{style.title}</div>
-      <div className="layout-copies">
-        {Array.from({ length: copies }, (_, copyIndex) => (
-          <div className="layout-photos" key={`copy-${copyIndex}`}>
-            {photos.map((photo) => <img key={`${copyIndex}-${photo.id}`} src={photo.dataUrl} alt="Captured booth photo" style={{ filter: style.filter }} />)}
-          </div>
-        ))}
-      </div>
-      <div className="layout-footer">{style.footer}</div>
+    <div className={`photo-layout ${compact ? 'compact' : ''}`} style={{ background: style.background, color: style.accent }}>
+      {Array.from({ length: copies }, (_, copyIndex) => (
+        <div key={`copy-${copyIndex}`} className="photo-layout-copy">
+          {previewPhotos.map((photo, index) => (
+            <div key={`${copyIndex}-${photo.id || index}`} className="photo-layout-frame">
+              {photo.dataUrl ? (
+                <img src={photo.dataUrl} alt="" style={{ filter: style.filter }} />
+              ) : (
+                <div className="photo-layout-empty">{index + 1}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   );
 }
 
-function createPortraitStripSlots(widthPixels: number, heightPixels: number, photoCount: number, copies: number) {
-  const outerMargin = Math.round(widthPixels * 0.035);
-  const columnGap = Math.round(widthPixels * 0.025);
-  const stripWidth = Math.floor((widthPixels - outerMargin * 2 - columnGap * (copies - 1)) / copies);
-  const topSpace = Math.round(heightPixels * 0.07);
-  const bottomSpace = Math.round(heightPixels * 0.09);
-  const gap = Math.max(12, Math.round(heightPixels * 0.006));
-  const photoHeight = Math.floor((heightPixels - topSpace - bottomSpace - gap * (photoCount - 1)) / photoCount);
-
-  return Array.from({ length: copies }, (_, copyIndex) => Array.from({ length: photoCount }, (_, photoIndex) => ({
-    id: `strip-${copyIndex + 1}-${photoIndex + 1}`,
-    type: 'photo' as const,
-    x: outerMargin + copyIndex * (stripWidth + columnGap),
-    y: topSpace + photoIndex * (photoHeight + gap),
-    width: stripWidth,
-    height: photoHeight,
-    fit: 'cover' as const,
-    photoIndex,
-  }))).flat();
+function TemplateLayoutPreview({ template, photos, filter = 'none', compact = false }: { template: TemplateOption; photos: Array<{ id: string; dataUrl: string }>; filter?: string; compact?: boolean }) {
+  return (
+    <div
+      className={`layout-preview ${compact ? 'compact' : ''}`}
+      style={{ aspectRatio: `${template.widthPixels} / ${template.heightPixels}` }}
+      aria-hidden="true"
+    >
+      <div className="layout-preview-frame">
+        {template.slots.map((templateSlot, index) => {
+          const photo = photos[templateSlot.photoIndex ?? index];
+          return (
+            <div
+              className="layout-preview-slot"
+              key={templateSlot.id}
+              style={{
+                left: `${(templateSlot.x / template.widthPixels) * 100}%`,
+                top: `${(templateSlot.y / template.heightPixels) * 100}%`,
+                width: `${(templateSlot.width / template.widthPixels) * 100}%`,
+                height: `${(templateSlot.height / template.heightPixels) * 100}%`,
+              }}
+            >
+              {photo ? <img src={photo.dataUrl} alt="" style={{ filter }} /> : <span>{index + 1}</span>}
+            </div>
+          );
+        })}
+        <div className="layout-preview-title">{template.name}</div>
+        <div className="layout-preview-footer">{template.requiredPhotos} pose{template.requiredPhotos === 1 ? '' : 's'}</div>
+      </div>
+    </div>
+  );
 }
-
-const templateSeed: TemplateOption[] = [
-  {
-    id: 'classic-portrait',
-    name: 'Classic Portrait',
-    description: 'Classic portrait layout with a central pose and a full-body compliment.',
-    printSize: '4x6',
-    physicalWidth: PRINT_SIZES['4x6'].widthInches,
-    physicalHeight: PRINT_SIZES['4x6'].heightInches,
-    widthPixels: PRINT_SIZES['4x6'].widthPixels,
-    heightPixels: PRINT_SIZES['4x6'].heightPixels,
-    dpi: 300,
-    orientation: 'portrait',
-    aspectRatio: PRINT_SIZES['4x6'].aspectRatio,
-    background: '#efe5d6',
-    requiredPhotos: 4,
-    isActive: true,
-    slots: createPortraitStripSlots(2400, 3600, 4, 2),
-  },
-  {
-    id: 'golden-moment',
-    name: 'Golden Moment',
-    description: 'Warm photo set for weddings, parties, and premium events.',
-    printSize: '4x6',
-    physicalWidth: PRINT_SIZES['4x6'].widthInches,
-    physicalHeight: PRINT_SIZES['4x6'].heightInches,
-    widthPixels: PRINT_SIZES['4x6'].widthPixels,
-    heightPixels: PRINT_SIZES['4x6'].heightPixels,
-    dpi: 300,
-    orientation: 'portrait',
-    aspectRatio: PRINT_SIZES['4x6'].aspectRatio,
-    background: '#f3ead8',
-    requiredPhotos: 4,
-    isActive: true,
-    slots: createPortraitStripSlots(2400, 3600, 4, 2),
-  },
-];
 
 const additionalTemplates: TemplateOption[] = [
   {
@@ -471,8 +600,11 @@ function App() {
                   className={`template-card ${selectedTemplateId === template.id ? 'selected' : ''}`}
                   onClick={() => setSelectedTemplate(template.id)}
                 >
-                  <span className="template-name">{template.name}</span>
-                  <span className="template-meta">{template.requiredPhotos} photos</span>
+                  <TemplateLayoutPreview template={template} photos={photos} filter={activeStyle.filter} compact />
+                  <div className="template-card-copy">
+                    <span className="template-name">{template.name}</span>
+                    <span className="template-meta">{template.requiredPhotos} photos</span>
+                  </div>
                 </button>
               ))}
             </div>
