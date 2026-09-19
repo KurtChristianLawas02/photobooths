@@ -125,7 +125,7 @@ export async function renderTemplate(
   context.fillStyle = template.background;
   context.fillRect(0, 0, canvas.width, canvas.height);
   drawTheme(context, template);
-  context.fillStyle = '#202020';
+  context.fillStyle = template.accentColor ?? '#202020';
   context.textAlign = 'center';
   if (template.headerText) {
     context.font = `700 ${Math.max(24, Math.round(canvas.width * 0.018))}px Arial`;

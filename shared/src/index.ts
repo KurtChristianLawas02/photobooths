@@ -83,6 +83,7 @@ export interface PrintTemplate {
   headerText?: string;
   footerText?: string;
   theme?: string;
+  accentColor?: string;
   active: boolean;
 }
 

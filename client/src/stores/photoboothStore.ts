@@ -17,6 +17,7 @@ interface PhotoboothState {
   setStep: (step: PhotoboothState['step']) => void;
   setTemplates: (templates: TemplateOption[]) => void;
   addPhoto: (photo: SessionPhoto) => void;
+  updatePhoto: (photoId: string, photo: SessionPhoto) => void;
   clearPhotos: () => void;
   setSettings: (settings: SettingsState) => void;
   setSelectedTemplate: (templateId: string | null) => void;
@@ -26,7 +27,7 @@ interface PhotoboothState {
 const defaultSettings: SettingsState = {
   businessName: 'Studio Booth',
   countdownDuration: 3,
-  mirrorCamera: true,
+  mirrorCamera: false,
   outputFormat: 'jpeg',
   photoQuality: 95,
   enableQr: true,
@@ -50,6 +51,7 @@ export const usePhotoboothStore = create<PhotoboothState>((set) => ({
   setStep: (step) => set({ step }),
   setTemplates: (templates) => set({ templates }),
   addPhoto: (photo) => set((state) => ({ photos: [...state.photos, photo] })),
+  updatePhoto: (photoId, photo) => set((state) => ({ photos: state.photos.map((item) => item.id === photoId ? photo : item) })),
   clearPhotos: () => set({ photos: [] }),
   setSettings: (settings) => set({ settings }),
   setSelectedTemplate: (templateId) => set({ selectedTemplateId: templateId }),

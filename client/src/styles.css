@@ -12,9 +12,21 @@ button { font: inherit; cursor: pointer; }
 .topbar { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(236,232,219,.16); padding-bottom: 22px; }
 .brand-lockup { display: flex; gap: 11px; align-items: center; font-size: 14px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .brand-mark { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid #c6b780; color: #d5c28b; border-radius: 50%; }
+.brand-mark img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 .topbar-actions { display: flex; gap: 10px; }
 .icon-button { display: grid; place-items: center; width: 44px; height: 44px; color: #dedbd1; border: 1px solid rgba(236,232,219,.2); background: rgba(255,255,255,.04); border-radius: 50%; transition: .2s ease; }
 .icon-button:hover { color: #151914; background: #d5c28b; }
+.auth-shell { display: grid; place-items: center; padding: 30px 20px; }
+.auth-card { position: relative; z-index: 1; width: min(100%, 500px); padding: clamp(28px, 6vw, 58px); border: 1px solid rgba(236,232,219,.16); background: rgba(10,13,10,.62); box-shadow: 0 30px 90px rgba(0,0,0,.3); }
+.auth-brand { margin-bottom: 62px; }
+.auth-card h1 { margin: 18px 0 20px; font-size: clamp(52px, 10vw, 78px); }
+.auth-intro { margin: 0 0 28px; color: #bfc2b7; line-height: 1.6; }
+.auth-form { display: grid; gap: 14px; }
+.setting-field input { padding: 13px; border: 1px solid rgba(255,255,255,.12); border-radius: 7px; background: #0c120f; color: #f2efe8; font: inherit; }
+.auth-submit { width: 100%; margin-top: 8px; }
+.auth-switch { margin-top: 20px; padding: 0; border: 0; background: transparent; color: #d5c28b; font-size: 13px; font-weight: 700; }
+.auth-switch:hover { color: #f4df9c; }
+.success-box { padding: 12px 14px; border: 1px solid rgba(155,194,126,.5); background: rgba(79,126,67,.18); color: #d9f0c9; border-radius: 8px; }
 .welcome-grid { display: grid; grid-template-columns: 1fr minmax(380px, 45%); gap: clamp(48px, 10vw, 150px); align-items: center; padding: clamp(74px, 12vh, 150px) 0 100px; }
 .eyebrow { color: #c9b77e; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .13em; text-transform: uppercase; }
 h1 { margin: 22px 0 24px; font-size: clamp(48px, 6vw, 86px); line-height: .99; letter-spacing: -.05em; font-weight: 700; }
@@ -46,8 +58,9 @@ h1 em { color: #d5c28b; font-family: 'Playfair Display', serif; font-weight: 600
 .preview-corner { position: absolute; width: 28px; height: 28px; border-color: #d5c28b; border-style: solid; }
 .corner-tl { top: 15px; left: 15px; border-width: 2px 0 0 2px; }.corner-tr { top: 15px; right: 15px; border-width: 2px 2px 0 0; }.corner-bl { bottom: 15px; left: 15px; border-width: 0 0 2px 2px; }.corner-br { right: 15px; bottom: 15px; border-width: 0 2px 2px 0; }
 .preview-footer { padding: 14px 3px 0; }
-.camera-video, .capture-video { width: 100%; height: 100%; object-fit: cover; background: #0c120f; display: block; }
+.camera-video, .capture-video { width: 100%; height: 100%; object-fit: cover; background: #0c120f; display: block; transform: scaleX(-1); }
 .device-row { margin-top: 16px; }
+.camera-mode-button { width: 100%; margin-top: 10px; padding: 12px 16px; }
 .device-row label { display: flex; flex-direction: column; gap: 8px; color: #c7d1c0; font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
 .device-row select { border: 1px solid rgba(255,255,255,.1); background: rgba(9,13,10,.9); color: #f2efe8; border-radius: 8px; padding: 12px; font-size: 14px; }
 .error-box { margin-top: 16px; padding: 12px 14px; border: 1px solid rgba(219,128,128,.5); background: rgba(135,31,28,.18); color: #ffd2d0; border-radius: 8px; }
@@ -99,6 +112,8 @@ h1 em { color: #d5c28b; font-family: 'Playfair Display', serif; font-weight: 600
 .photo-layout.compact .layout-footer { font-size: clamp(6px, .85vw, 10px); }
 .review-grid .photo-layout { margin: 22px auto 0; }
 .review-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-top: 22px; }
+.retake-list { display: flex; flex-direction: column; gap: 10px; justify-content: center; }
+.retake-button { width: 100%; padding: 13px 16px; }
 .review-photo-card { overflow: hidden; border-radius: 16px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.04); }
 .review-photo-card img { width: 100%; height: 260px; object-fit: cover; display: block; }
 .final-screen { display: grid; place-items: center; min-height: 58vh; }

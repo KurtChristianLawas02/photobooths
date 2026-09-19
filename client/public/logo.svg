@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title>Studio Booth P logo</title>
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4df9c"/>
+      <stop offset="1" stop-color="#b3a174"/>
+    </linearGradient>
+    <linearGradient id="letter" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#354b35"/>
+      <stop offset="1" stop-color="#101410"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="4" dy="6" stdDeviation="4" flood-color="#101410" flood-opacity=".5"/>
+    </filter>
+  </defs>
+  <rect width="128" height="128" rx="18" fill="url(#gold)"/>
+  <path d="M28 103V25h42c20 0 32 11 32 28s-12 28-32 28H48v22H28Zm20-39h20c8 0 13-4 13-11s-5-11-13-11H48v22Z" fill="url(#letter)" filter="url(#shadow)"/>
+</svg>

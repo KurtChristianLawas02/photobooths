@@ -76,6 +76,9 @@ export class CameraService {
       throw new Error('Unable to capture frame.');
     }
 
+    // The mobile front-camera stream is mirrored, so flip the saved frame back.
+    context.translate(width, 0);
+    context.scale(-1, 1);
     context.drawImage(video, 0, 0, width, height);
     return canvas.toDataURL('image/png');
   }

@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PRINT_SIZES, type Orientation, type PrintSizeId, type PrintTemplate } from '@photobooth/shared';
-import { Camera, CheckCheck, ChevronRight, Download, ImageIcon, Maximize, Printer, RefreshCcw, Settings2, Sparkles, TimerReset } from 'lucide-react';
+import { Camera, CheckCheck, ChevronRight, Download, ImageIcon, LogOut, Maximize, Printer, RefreshCcw, Settings2, Sparkles, TimerReset } from 'lucide-react';
+import type { Session } from '@supabase/supabase-js';
 import QRCode from 'qrcode';
 import { useCamera } from './hooks/useCamera';
 import { usePhotoboothStore } from './stores/photoboothStore';
 import type { TemplateOption } from './types';
 import { renderTemplate } from './services/renderService';
 import { TemplateEditor } from './components/TemplateEditor';
+import { AuthScreen } from './components/AuthScreen';
+import { supabase } from './utils/supabase';
 
 const workflowSteps = ['Event', 'Camera', 'Capture', 'Review', 'Print'];
 
@@ -163,14 +166,18 @@ function OrientationSelector({ value, onChange }: { value: Orientation; onChange
 }
 
 function App() {
-  const { templates, selectedTemplateId, setTemplates, setSelectedTemplate, photos, addPhoto, clearPhotos, countdown, setCountdown, step, setStep, settings, setSettings } = usePhotoboothStore();
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const { templates, selectedTemplateId, setTemplates, setSelectedTemplate, photos, addPhoto, updatePhoto, clearPhotos, countdown, setCountdown, step, setStep, settings, setSettings } = usePhotoboothStore();
   const [isPreparing, setIsPreparing] = useState(false);
   const [countdownValue, setCountdownValue] = useState(settings.countdownDuration || 3);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+  const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user');
   const [selectedPrintSize, setSelectedPrintSize] = useState<PrintSizeId>(settings.defaultPrintSize);
   const [selectedOrientation, setSelectedOrientation] = useState<Orientation>(settings.defaultOrientation);
   const [selectedStyle, setSelectedStyle] = useState('golden-strip');
+  const [retakePhotoId, setRetakePhotoId] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
@@ -180,12 +187,56 @@ function App() {
   const { videoRef, status, error, devices, ensureCamera, capture, stopCamera } = useCamera();
 
   useEffect(() => {
+    let isCurrent = true;
+
+    const restoreSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (isCurrent) {
+        setSession(data.session);
+        setAuthLoading(false);
+      }
+    };
+
+    void restoreSession();
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setAuthLoading(false);
+    });
+
+    return () => {
+      isCurrent = false;
+      subscription.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
     const allTemplates = [...templateSeed, ...namedFourBySixPresets, ...additionalTemplates];
     setTemplates(allTemplates);
     if (!selectedTemplateId && allTemplates[0]) {
       setSelectedTemplate(allTemplates[0].id);
     }
   }, [selectedTemplateId, setSelectedTemplate, setTemplates]);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    const loadSupabaseTemplates = async () => {
+      const { data, error } = await supabase.from('templates').select('*').eq('active', true);
+      if (error || !data?.length || !isCurrent) {
+        return;
+      }
+
+      const remoteTemplates = data as unknown as TemplateOption[];
+      if (remoteTemplates.every((template) => template.id && template.slots?.length)) {
+        setTemplates(remoteTemplates);
+      }
+    };
+
+    void loadSupabaseTemplates();
+    return () => {
+      isCurrent = false;
+    };
+  }, [setTemplates]);
 
   useEffect(() => {
     setCountdownValue(settings.countdownDuration || 3);
@@ -217,9 +268,11 @@ function App() {
     ...activeTemplate,
     active: activeTemplate.isActive,
     thumbnailUrl: null,
+    background: activeStyle.background,
     headerText: activeStyle.title,
     footerText: activeStyle.footer,
     theme: activeStyle.theme,
+    accentColor: activeStyle.accent,
   } : null;
 
   const startSession = async () => {
@@ -229,7 +282,7 @@ function App() {
 
     setIsPreparing(true);
     try {
-      await ensureCamera(selectedDeviceId || undefined);
+      await ensureCamera(selectedDeviceId || undefined, cameraFacingMode);
       setStep('session');
     } catch (captureError) {
       const message = captureError instanceof Error ? captureError.message : 'Camera unavailable.';
@@ -239,8 +292,14 @@ function App() {
     }
   };
 
+  const useBackCamera = async () => {
+    setCameraFacingMode('environment');
+    setSelectedDeviceId('');
+    await ensureCamera(undefined, 'environment');
+  };
+
   const takePhoto = async () => {
-    if (!videoRef.current || isCapturing || !activeTemplate || photos.length >= activeTemplate.requiredPhotos) {
+    if (!videoRef.current || isCapturing || !activeTemplate || (!retakePhotoId && photos.length >= activeTemplate.requiredPhotos)) {
       return;
     }
 
@@ -256,9 +315,15 @@ function App() {
 
     setCountdown(0);
     const dataUrl = capture();
-    addPhoto({ id: `photo-${Date.now()}`, dataUrl, createdAt: new Date().toISOString() });
+    const capturedPhoto = { id: retakePhotoId ?? `photo-${Date.now()}`, dataUrl, createdAt: new Date().toISOString() };
+    if (retakePhotoId) {
+      updatePhoto(retakePhotoId, capturedPhoto);
+    } else {
+      addPhoto(capturedPhoto);
+    }
     const nextPhotoCount = photos.length + 1;
-    if (nextPhotoCount >= activeTemplate.requiredPhotos) {
+    setRetakePhotoId(null);
+    if (retakePhotoId || nextPhotoCount >= activeTemplate.requiredPhotos) {
       setStep('review');
     }
     setIsCapturing(false);
@@ -267,6 +332,7 @@ function App() {
   const resetSession = () => {
     clearPhotos();
     setSelectedStyle('golden-strip');
+    setRetakePhotoId(null);
     setIsCapturing(false);
     setPrintPreview(null);
     setQrCode(null);
@@ -277,6 +343,7 @@ function App() {
 
   const tryAgain = () => {
     clearPhotos();
+    setRetakePhotoId(null);
     setCountdown(settings.countdownDuration || 3);
     setStep('session');
   };
@@ -357,18 +424,23 @@ function App() {
     setShowSettings(false);
   };
 
+  if (authLoading || !session) {
+    return <AuthScreen loading={authLoading} />;
+  }
+
   return (
     <main className="booth-shell">
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       <header className="topbar">
         <div className="brand-lockup">
-          <div className="brand-mark"><Sparkles size={18} /></div>
+          <div className="brand-mark"><img src="/logo.svg" alt="Studio Booth logo" /></div>
           <span>{settings.businessName}</span>
         </div>
         <div className="topbar-actions">
           <button className="icon-button" aria-label="Enter fullscreen" onClick={() => document.documentElement.requestFullscreen?.()}><Maximize size={20} /></button>
           <button className="icon-button" aria-label="Open settings" onClick={() => setShowSettings(true)}><Settings2 size={20} /></button>
+          <button className="icon-button" aria-label="Sign out" onClick={() => void supabase.auth.signOut()}><LogOut size={20} /></button>
         </div>
       </header>
 
@@ -424,6 +496,9 @@ function App() {
                   ))}
                 </select>
               </label>
+              <button type="button" className="secondary-button camera-mode-button" onClick={() => void useBackCamera()} disabled={status === 'requesting'}>
+                <Camera size={17} /> Use back camera
+              </button>
             </div>
           </div>
         </section>
@@ -446,7 +521,7 @@ function App() {
             </div>
             <div className="session-actions">
               <button className="secondary-button" onClick={resetSession}><RefreshCcw size={18} /> Exit Session</button>
-              <button className="primary-button" onClick={takePhoto} disabled={isCapturing || photos.length >= (activeTemplate?.requiredPhotos ?? 1)}><Camera size={18} /> {isCapturing ? 'Get ready...' : `Capture ${photos.length + 1} of ${activeTemplate?.requiredPhotos ?? 1}`}</button>
+              <button className="primary-button" onClick={takePhoto} disabled={isCapturing || (!retakePhotoId && photos.length >= (activeTemplate?.requiredPhotos ?? 1))}><Camera size={18} /> {isCapturing ? 'Get ready...' : retakePhotoId ? 'Retake photo' : `Capture ${photos.length + 1} of ${activeTemplate?.requiredPhotos ?? 1}`}</button>
             </div>
             <div className="countdown-strip">
               {countdownSequence.map((value) => (
@@ -486,6 +561,13 @@ function App() {
           </div>
           <div className="review-grid">
             <PhotoLayout photos={photos} style={activeStyle} copies={activeTemplate?.printSize === '2x6' ? 1 : 2} />
+            <div className="retake-list" aria-label="Retake captured photos">
+              {photos.map((photo, index) => (
+                <button type="button" className="secondary-button retake-button" key={photo.id} onClick={() => { setRetakePhotoId(photo.id); setStep('session'); }}>
+                  <RefreshCcw size={17} /> Retake photo {index + 1}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="review-actions">
             <button className="secondary-button" onClick={tryAgain}><RefreshCcw size={18} /> Try again</button>

@@ -86,7 +86,7 @@ type SettingRecord = {
 const settingsStore: SettingRecord = {
   businessName: 'Studio Booth',
   countdownDuration: 3,
-  mirrorCamera: true,
+  mirrorCamera: false,
   outputFormat: 'jpeg',
   photoQuality: 95,
   defaultPrintSize: '4x6',

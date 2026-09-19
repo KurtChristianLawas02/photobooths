@@ -28,7 +28,7 @@ export function useCamera() {
     };
   }, []);
 
-  const ensureCamera = async (deviceId?: string) => {
+  const ensureCamera = async (deviceId?: string, facingMode: 'user' | 'environment' = 'user') => {
     try {
       setStatus('requesting');
       setError(null);
@@ -38,7 +38,7 @@ export function useCamera() {
 
       const stream = deviceId
         ? await serviceRef.current!.switchCamera(deviceId)
-        : await serviceRef.current!.startCamera({ facingMode: 'user' });
+        : await serviceRef.current!.startCamera({ facingMode });
 
       streamRef.current = stream;
       setStatus('ready');
