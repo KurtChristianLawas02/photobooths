@@ -274,6 +274,54 @@ h1 em { color: #d5c28b; font-family: 'Playfair Display', serif; font-weight: 600
 .admin-state p { margin: 0 0 20px; color: #b5beb1; }
 .admin-empty-view { display: grid; place-items: center; min-height: 320px; text-align: center; color: #d5c28b; }
 .admin-empty-view p { max-width: 450px; margin: 14px 0 0; color: #aeb8ac; line-height: 1.6; }
+.admin-analytics-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.admin-analytics-summary .admin-panel { padding: 20px; }
+.admin-analytics-summary span, .admin-analytics-summary small { display: block; color: #9fa99d; font-family: 'DM Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.admin-analytics-summary strong { display: block; margin: 18px 0 7px; color: #f5ebcf; font-size: 32px; font-weight: 500; }
+.admin-analytics-summary small { color: #70806e; font-size: 9px; text-transform: none; }
+.admin-chart-panel { margin-top: 14px; }
+.admin-chart { display: flex; height: 260px; gap: 18px; align-items: end; padding: 30px 10px 0; }
+.admin-chart-column { display: grid; height: 100%; flex: 1; grid-template-rows: 20px 1fr 22px; gap: 8px; align-items: end; text-align: center; }
+.admin-chart-column strong { color: #d5c28b; font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; }
+.admin-chart-column span { color: #9fa99d; font-family: 'DM Mono', monospace; font-size: 10px; text-transform: uppercase; }
+.admin-chart-bar { width: min(42px, 70%); min-height: 2px; margin: auto auto 0; border: 1px solid rgba(213,194,139,.4); background: linear-gradient(180deg, #d5c28b, #7d936d); }
+.admin-settings-panel { max-width: 860px; }
+.admin-settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 18px; margin-top: 18px; }
+.admin-settings-grid .setting-field { margin-top: 12px; }
+.admin-settings-grid .setting-field input { padding: 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 7px; background: #0c120f; color: #f2efe8; font: inherit; }
+.admin-save-message { margin: 16px 0 0; color: #b8d99b; font-size: 13px; }
+.admin-template-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.admin-helper-text { margin: 8px 0 0; color: #aeb8ac; font-size: 13px; }
+.admin-template-form { max-width: 860px; margin-top: 18px; }
+.admin-template-form .admin-settings-grid { margin-top: 0; }
+.admin-template-description { grid-column: 1 / -1; }
+.admin-template-description textarea { min-height: 80px; resize: vertical; padding: 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 7px; background: #0c120f; color: #f2efe8; font: inherit; }
+.admin-template-form input[type="color"] { width: 100%; height: 44px; padding: 4px; }
+.admin-template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-top: 24px; }
+.admin-template-card { overflow: hidden; border: 1px solid rgba(236,232,219,.13); background: rgba(255,255,255,.035); }
+.admin-template-card strong, .admin-template-card small { display: block; }
+.admin-template-card strong { padding: 14px 14px 0; font-size: 13px; }
+.admin-template-card small { padding: 5px 14px 14px; color: #9fa99d; font-family: 'DM Mono', monospace; font-size: 9px; text-transform: uppercase; }
+.admin-template-swatch { display: grid; min-height: 140px; place-items: center; border-bottom: 1px solid; font-size: 15px; font-weight: 800; text-align: center; }
+.downloads-shell { min-height: 100vh; padding: 42px clamp(22px, 6vw, 90px) 70px; color: #f5f1e9; background: radial-gradient(circle at 78% 4%, #30452f 0, transparent 32%), #101410; }
+.downloads-header { display: flex; max-width: 1180px; margin: 0 auto; align-items: end; justify-content: space-between; gap: 24px; padding-bottom: 30px; border-bottom: 1px solid rgba(236,232,219,.13); }
+.downloads-header .eyebrow { margin: 0 0 10px; }
+.downloads-header h1 { margin: 0; font-size: clamp(40px, 6vw, 72px); }
+.downloads-header p:last-child { margin: 15px 0 0; color: #bfc2b7; }
+.downloads-actions { display: flex; gap: 10px; align-items: center; }
+.downloads-actions .secondary-button { white-space: nowrap; }
+.downloads-grid { display: grid; max-width: 1180px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin: 30px auto 0; }
+.download-card { overflow: hidden; border: 1px solid rgba(236,232,219,.13); background: rgba(255,255,255,.035); }
+.download-card > a { display: block; aspect-ratio: 3 / 4; background: #0a0d0a; }
+.download-card img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.download-card-copy { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; }
+.download-card-copy strong, .download-card-copy small { display: block; }
+.download-card-copy strong { color: #f5ebcf; font-size: 13px; }
+.download-card-copy small { margin-top: 5px; color: #9fa99d; font-family: 'DM Mono', monospace; font-size: 9px; }
+.download-link { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border: 1px solid rgba(213,194,139,.35); color: #d5c28b; }
+.downloads-empty { display: grid; max-width: 700px; min-height: 320px; margin: 30px auto 0; place-items: center; align-content: center; gap: 10px; border: 1px solid rgba(236,232,219,.13); background: rgba(255,255,255,.035); color: #d5c28b; text-align: center; }
+.downloads-empty h2 { margin: 4px 0 0; }
+.downloads-empty p { margin: 0 0 10px; color: #aeb8ac; }
 .admin-overlay { display: none; }
 @media (max-width: 1050px) { .admin-stat-grid { grid-template-columns: repeat(3, minmax(120px, 1fr)); } }
 @media (max-width: 760px) {
@@ -290,4 +338,13 @@ h1 em { color: #d5c28b; font-family: 'Playfair Display', serif; font-weight: 600
   .admin-panel { padding: 18px; }
   .admin-toolbar { align-items: flex-end; }
   .admin-search input { width: min(100%, 280px); }
+  .admin-template-toolbar { align-items: flex-start; flex-direction: column; }
+  .admin-template-toolbar .primary-button { width: 100%; }
+  .admin-template-description { grid-column: auto; }
+  .admin-analytics-summary { grid-template-columns: 1fr; }
+  .admin-chart { gap: 8px; }
+  .downloads-shell { padding: 24px 16px 50px; }
+  .downloads-header { align-items: flex-start; flex-direction: column; }
+  .downloads-actions { width: 100%; }
+  .downloads-actions .secondary-button { flex: 1; }
 }

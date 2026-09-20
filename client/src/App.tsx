@@ -10,6 +10,7 @@ import { renderTemplate } from './services/renderService';
 import { TemplateEditor } from './components/TemplateEditor';
 import { AuthScreen } from './components/AuthScreen';
 import { AdminDashboard } from './components/AdminDashboard';
+import { DownloadHistory } from './components/DownloadHistory';
 import { isSupabaseConfigured, supabase, supabaseConfigMessage } from './utils/supabase';
 
 const workflowSteps = ['Event', 'Camera', 'Capture', 'Review', 'Print'];
@@ -366,6 +367,15 @@ function App() {
   }, [session]);
 
   useEffect(() => {
+    if (!session) return;
+    const loadSettings = async () => {
+      const { data, error } = await supabase.from('app_settings').select('settings').eq('id', 'global').maybeSingle();
+      if (!error && data?.settings) setSettings({ ...settings, ...(data.settings as Partial<typeof settings>) });
+    };
+    void loadSettings();
+  }, [session, setSettings]);
+
+  useEffect(() => {
     const allTemplates = [...templateSeed, ...namedFourBySixPresets, ...additionalTemplates];
     setTemplates(allTemplates);
     if (!selectedTemplateId && allTemplates[0]) {
@@ -386,7 +396,23 @@ function App() {
         return;
       }
 
-      const remoteTemplates = data as unknown as TemplateOption[];
+      const remoteTemplates = data.map((template) => ({
+        id: template.id,
+        name: template.name,
+        description: template.description,
+        printSize: template.print_size,
+        physicalWidth: template.physical_width,
+        physicalHeight: template.physical_height,
+        widthPixels: template.width_pixels,
+        heightPixels: template.height_pixels,
+        dpi: template.dpi,
+        orientation: template.orientation,
+        aspectRatio: template.aspect_ratio,
+        background: template.background,
+        requiredPhotos: Array.isArray(template.slots) ? template.slots.length : 0,
+        isActive: template.active,
+        slots: template.slots,
+      })) as unknown as TemplateOption[];
       if (remoteTemplates.every((template) => template.id && template.slots?.length)) {
         setTemplates(remoteTemplates);
       }
@@ -553,6 +579,28 @@ function App() {
     link.href = styledLayout;
     link.download = `${settings.businessName.toLowerCase().replace(/\s+/g, '-')}-${activeStyle.id}.${settings.outputFormat}`;
     link.click();
+    try {
+      const imageBlob = await (await fetch(styledLayout)).blob();
+      const storagePath = `${session?.user.id}/${Date.now()}-${link.download}`;
+      const uploadResult = await supabase.storage.from('photobooth-downloads').upload(storagePath, imageBlob, { contentType: `image/${settings.outputFormat === 'jpeg' ? 'jpeg' : 'png'}`, upsert: false });
+      if (uploadResult.error) throw uploadResult.error;
+      const { data: publicFile } = supabase.storage.from('photobooth-downloads').getPublicUrl(storagePath);
+      const { error: downloadError } = await supabase.from('photo_downloads').insert({
+        user_id: session?.user.id,
+        session_id: activeSessionId,
+        file_name: link.download,
+        storage_path: storagePath,
+        public_url: publicFile.publicUrl,
+        format: settings.outputFormat,
+        print_size: renderTemplateConfig.printSize,
+        width: renderTemplateConfig.widthPixels,
+        height: renderTemplateConfig.heightPixels,
+        file_size: imageBlob.size,
+      });
+      if (downloadError) throw downloadError;
+    } catch (downloadError) {
+      console.error('Could not save download history:', downloadError);
+    }
     if (activeSessionId) {
       await supabase.from('photobooth_sessions').update({ download_count: 1 }).eq('id', activeSessionId);
     }
@@ -614,15 +662,8 @@ function App() {
   };
 
   const applySettings = async () => {
-    const response = await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(settings),
-    });
-    if (response.ok) {
-      const savedSettings = await response.json();
-      setSettings(savedSettings);
-    }
+    const { error } = await supabase.from('app_settings').upsert({ id: 'global', settings, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    if (error) console.error('Could not save booth settings:', error);
     setSelectedPrintSize(settings.defaultPrintSize);
     setSelectedOrientation(settings.defaultOrientation);
     setShowSettings(false);
@@ -636,6 +677,10 @@ function App() {
     return <AdminDashboard session={session} onLogout={() => void supabase.auth.signOut()} />;
   }
 
+  if (window.location.pathname === '/downloads') {
+    return <DownloadHistory session={session} onLogout={() => void supabase.auth.signOut()} />;
+  }
+
   return (
     <main className="booth-shell">
       <div className="ambient ambient-one" />
@@ -647,6 +692,7 @@ function App() {
         </div>
         <div className="topbar-actions">
           <button className="icon-button" aria-label="Enter fullscreen" onClick={() => document.documentElement.requestFullscreen?.()}><Maximize size={20} /></button>
+          <button className="icon-button" aria-label="View recent downloads" onClick={() => window.location.assign('/downloads')}><Download size={20} /></button>
           <button className="icon-button" aria-label="Open settings" onClick={() => setShowSettings(true)}><Settings2 size={20} /></button>
           <button className="icon-button" aria-label="Sign out" onClick={() => void supabase.auth.signOut()}><LogOut size={20} /></button>
         </div>
