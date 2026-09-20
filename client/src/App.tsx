@@ -27,6 +27,8 @@ const photoStyles = [
   { id: 'tailgate', name: 'Tailgate', description: 'Playful editorial event poster', layout: 'tailgate', theme: 'tailgate', filter: 'sepia(.08) saturate(1.06) contrast(1.04)', background: '#e7e4d2', accent: '#9d1721', title: 'THE GOOD TIMES', footer: 'PHOTO BOOTH EDITION' },
 ];
 
+type PhotoStyle = (typeof photoStyles)[number];
+
 function slot(id: string, x: number, y: number, width: number, height: number, photoIndex: number): PhotoSlot {
   return { id, type: 'photo', x, y, width, height, fit: 'cover', photoIndex };
 }
@@ -176,7 +178,7 @@ function createPortraitStripSlots(widthPixels: number, heightPixels: number, pho
   });
 }
 
-function PhotoLayout({ photos, style, copies = 1, compact = false }: { photos: Array<{ id: string; dataUrl: string }>; style: (typeof photoStyles)[number]; copies?: number; compact?: boolean }) {
+function PhotoLayout({ photos, style, copies = 1, compact = false }: { photos: Array<{ id: string; dataUrl: string }>; style: PhotoStyle; copies?: number; compact?: boolean }) {
   const previewPhotos = photos.length > 0 ? photos : [{ id: 'placeholder', dataUrl: '' }];
 
   return (
@@ -442,6 +444,25 @@ function App() {
     [selectedTemplateId, visibleTemplates],
   );
 
+  const availableStyles = useMemo<PhotoStyle[]>(
+    () => [
+      ...photoStyles,
+      ...templates.map((template) => ({
+        id: `template-style-${template.id}`,
+        name: template.name,
+        description: template.description ?? 'Custom style created by your studio admin.',
+        layout: 'custom',
+        theme: template.id,
+        filter: 'none',
+        background: template.background,
+        accent: '#d5c28b',
+        title: template.name.toUpperCase(),
+        footer: template.description?.toUpperCase() || 'STUDIO BOOTH STYLE',
+      })),
+    ],
+    [templates],
+  );
+
   useEffect(() => {
     if (activeTemplate && activeTemplate.id !== selectedTemplateId) {
       setSelectedTemplate(activeTemplate.id);
@@ -449,7 +470,7 @@ function App() {
   }, [activeTemplate, selectedTemplateId, setSelectedTemplate]);
 
   const countdownSequence = Array.from({ length: Math.max(countdownValue, 1) }, (_, index) => countdownValue - index);
-  const activeStyle = photoStyles.find((style) => style.id === selectedStyle) ?? photoStyles[0];
+  const activeStyle = availableStyles.find((style) => style.id === selectedStyle) ?? availableStyles[0];
   const renderTemplateConfig: PrintTemplate | null = activeTemplate ? {
     ...activeTemplate,
     active: activeTemplate.isActive,
@@ -810,7 +831,7 @@ function App() {
               <p className="style-helper">Your look is applied to every captured photo.</p>
             </div>
             <div className="style-options">
-              {photoStyles.map((style) => (
+              {availableStyles.map((style) => (
                 <button
                   type="button"
                   key={style.id}
