@@ -4,6 +4,7 @@ import { CameraService, type CameraStatus } from '../services/cameraService';
 export function useCamera() {
   const serviceRef = useRef<CameraService | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [status, setStatus] = useState<CameraStatus>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -14,12 +15,12 @@ export function useCamera() {
   }
 
   useEffect(() => {
-    if (status === 'ready' && videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-      videoRef.current.muted = true;
-      void videoRef.current.play();
+    if (status === 'ready' && videoElement && streamRef.current) {
+      videoElement.srcObject = streamRef.current;
+      videoElement.muted = true;
+      void videoElement.play();
     }
-  }, [status]);
+  }, [status, videoElement]);
 
   useEffect(() => {
     return () => {
@@ -56,5 +57,10 @@ export function useCamera() {
     return serviceRef.current!.captureFrame(videoRef.current);
   };
 
-  return { videoRef, status, error, devices, ensureCamera, capture, stopCamera: () => serviceRef.current?.stopCamera() };
+  const videoRefCallback = (element: HTMLVideoElement | null) => {
+    videoRef.current = element;
+    setVideoElement(element);
+  };
+
+  return { videoRef, videoRefCallback, status, error, devices, ensureCamera, capture, stopCamera: () => serviceRef.current?.stopCamera() };
 }

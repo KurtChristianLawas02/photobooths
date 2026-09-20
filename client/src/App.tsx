@@ -316,7 +316,7 @@ function App() {
   const [printPreview, setPrintPreview] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
-  const { videoRef, status, error, devices, ensureCamera, capture, stopCamera } = useCamera();
+  const { videoRef, videoRefCallback, status, error, devices, ensureCamera, capture, stopCamera } = useCamera();
 
   useEffect(() => {
     let isCurrent = true;
@@ -755,7 +755,7 @@ function App() {
           <div className="preview-panel">
             <div className="preview-label"><Camera size={15} /> Live preview</div>
             <div className="preview-window">
-              {status === 'ready' ? <video ref={videoRef} autoPlay playsInline muted className="camera-video" /> : <div className="preview-grid" />}
+              {status === 'ready' ? <video ref={videoRefCallback} autoPlay playsInline muted className="camera-video" /> : <div className="preview-grid" />}
               <div className="preview-silhouette"><span>YOUR<br />PREVIEW</span></div>
               <div className="preview-corner corner-tl" /><div className="preview-corner corner-tr" />
               <div className="preview-corner corner-bl" /><div className="preview-corner corner-br" />
@@ -790,7 +790,7 @@ function App() {
           </div>
           <div className="session-panel">
             <div className="session-preview-wrapper">
-              <video ref={videoRef} autoPlay playsInline muted className="capture-video" />
+              <video ref={videoRefCallback} autoPlay playsInline muted className="capture-video" />
               <button
                 type="button"
                 className="session-camera-toggle"
