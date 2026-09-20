@@ -383,7 +383,7 @@ function App() {
     if (!selectedTemplateId && allTemplates[0]) {
       setSelectedTemplate(allTemplates[0].id);
     }
-  }, [selectedTemplateId, setSelectedTemplate, setTemplates]);
+  }, [setSelectedTemplate, setTemplates]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -446,7 +446,6 @@ function App() {
 
   const availableStyles = useMemo<PhotoStyle[]>(
     () => [
-      ...photoStyles,
       ...templates.map((template) => ({
         id: `template-style-${template.id}`,
         name: template.name,
@@ -459,6 +458,7 @@ function App() {
         title: template.name.toUpperCase(),
         footer: template.description?.toUpperCase() || 'STUDIO BOOTH STYLE',
       })),
+      ...photoStyles,
     ],
     [templates],
   );
