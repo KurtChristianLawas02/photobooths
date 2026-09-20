@@ -71,6 +71,12 @@ npm run build
 
 Authentication requires `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. Add both variables to Vercel Project Settings > Environment Variables for Production, then redeploy because Vite embeds `VITE_` variables at build time. Use only the public publishable key in the browser, never a Supabase service-role key.
 
+To allow signups to use the app immediately without email confirmation, open the Supabase Dashboard and go to Authentication > Providers > Email, then turn off **Confirm email**. This is a Supabase project setting; it cannot be enabled safely from the browser with the publishable key.
+
+## Admin dashboard setup
+
+The protected admin area is available at `/admin`. Apply `supabase/migrations/202609200001_admin_foundation.sql` in the Supabase SQL Editor, create the first admin user through Supabase Auth, then promote that account with the `update public.profiles set role = 'super_admin' ...` statement at the end of the migration. Admin access is checked against `public.profiles` and enforced by RLS; changing the URL alone is not sufficient.
+
 If a deployment URL shows `DEPLOYMENT_NOT_FOUND`, that specific Vercel deployment is no longer available. Open the latest successful deployment URL after pushing the fix.
 This builds `shared` before the client and server, which is required because both workspaces import `@photobooth/shared` from its generated `dist` directory. The Express API is a separate long-running service and should be deployed separately, then configured through `VITE_API_URL` and `CLIENT_URL`. The Vercel client deployment by itself cannot run the local Express listener or provide durable PostgreSQL/photo storage.
 

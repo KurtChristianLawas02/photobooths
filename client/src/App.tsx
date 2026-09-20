@@ -9,6 +9,7 @@ import type { TemplateOption } from './types';
 import { renderTemplate } from './services/renderService';
 import { TemplateEditor } from './components/TemplateEditor';
 import { AuthScreen } from './components/AuthScreen';
+import { AdminDashboard } from './components/AdminDashboard';
 import { isSupabaseConfigured, supabase, supabaseConfigMessage } from './utils/supabase';
 
 const workflowSteps = ['Event', 'Camera', 'Capture', 'Review', 'Print'];
@@ -24,8 +25,6 @@ const photoStyles = [
   { id: 'retro-film', name: 'Retro Film', description: 'Warm grain and a nostalgic finish', layout: 'retro', theme: 'retro', filter: 'sepia(.3) saturate(.82) contrast(1.12)', background: '#f0d6a4', accent: '#783d2f', title: 'GOOD OLD DAYS', footer: 'A LITTLE BIT OF MAGIC' },
   { id: 'tailgate', name: 'Tailgate', description: 'Playful editorial event poster', layout: 'tailgate', theme: 'tailgate', filter: 'sepia(.08) saturate(1.06) contrast(1.04)', background: '#e7e4d2', accent: '#9d1721', title: 'THE GOOD TIMES', footer: 'PHOTO BOOTH EDITION' },
 ];
-
-type PhotoStyle = (typeof photoStyles)[number];
 
 function slot(id: string, x: number, y: number, width: number, height: number, photoIndex: number): PhotoSlot {
   return { id, type: 'photo', x, y, width, height, fit: 'cover', photoIndex };
@@ -296,6 +295,7 @@ function OrientationSelector({ value, onChange }: { value: Orientation; onChange
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const { templates, selectedTemplateId, setTemplates, setSelectedTemplate, photos, addPhoto, updatePhoto, clearPhotos, countdown, setCountdown, step, setStep, settings, setSettings } = usePhotoboothStore();
   const [isPreparing, setIsPreparing] = useState(false);
@@ -342,6 +342,28 @@ function App() {
       subscription.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!session || window.location.pathname === '/admin' || window.location.pathname.startsWith('/admin/')) return;
+
+    let isCurrent = true;
+    const redirectAdmin = async () => {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .maybeSingle();
+
+      if (isCurrent && !error && profile && ['admin', 'super_admin'].includes(profile.role)) {
+        window.location.replace('/admin');
+      }
+    };
+
+    void redirectAdmin();
+    return () => {
+      isCurrent = false;
+    };
+  }, [session]);
 
   useEffect(() => {
     const allTemplates = [...templateSeed, ...namedFourBySixPresets, ...additionalTemplates];
@@ -421,6 +443,16 @@ function App() {
     setIsPreparing(true);
     try {
       await ensureCamera(selectedDeviceId || undefined, cameraFacingMode);
+      const { data: boothSession, error: sessionError } = await supabase
+        .from('photobooth_sessions')
+        .insert({ user_id: session?.user.id, template_id: activeTemplate.id, status: 'capturing' })
+        .select('id')
+        .single();
+      if (sessionError) {
+        console.error('Could not record booth session:', sessionError);
+      } else {
+        setActiveSessionId(boothSession.id as string);
+      }
       setStep('session');
     } catch (captureError) {
       const message = captureError instanceof Error ? captureError.message : 'Camera unavailable.';
@@ -467,6 +499,19 @@ function App() {
     } else {
       addPhoto(capturedPhoto);
     }
+    if (activeSessionId && session) {
+      const { error: photoError } = await supabase.from('photos').insert({
+        session_id: activeSessionId,
+        user_id: session.user.id,
+        template_id: activeTemplate.id,
+        print_size: activeTemplate.printSize,
+        width: activeTemplate.widthPixels,
+        height: activeTemplate.heightPixels,
+        format: settings.outputFormat,
+      });
+      if (photoError) console.error('Could not record captured photo:', photoError);
+      await supabase.from('photobooth_sessions').update({ photos_taken: photos.length + 1, status: 'capturing' }).eq('id', activeSessionId);
+    }
     const nextPhotoCount = photos.length + 1;
     setRetakePhotoId(null);
     if (retakePhotoId || nextPhotoCount >= activeTemplate.requiredPhotos) {
@@ -475,7 +520,13 @@ function App() {
     setIsCapturing(false);
   };
 
-  const resetSession = () => {
+  const resetSession = async () => {
+    if (activeSessionId) {
+      await supabase.from('photobooth_sessions').update({
+        status: photos.length > 0 ? 'completed' : 'cancelled',
+        completed_at: new Date().toISOString(),
+      }).eq('id', activeSessionId);
+    }
     clearPhotos();
     setSelectedStyle('golden-strip');
     setRetakePhotoId(null);
@@ -483,6 +534,7 @@ function App() {
     setPrintPreview(null);
     setQrCode(null);
     stopCamera();
+    setActiveSessionId(null);
     setStep('home');
     setCountdown(settings.countdownDuration || 3);
   };
@@ -501,6 +553,9 @@ function App() {
     link.href = styledLayout;
     link.download = `${settings.businessName.toLowerCase().replace(/\s+/g, '-')}-${activeStyle.id}.${settings.outputFormat}`;
     link.click();
+    if (activeSessionId) {
+      await supabase.from('photobooth_sessions').update({ download_count: 1 }).eq('id', activeSessionId);
+    }
   };
 
   const renderFinalLayout = async () => {
@@ -535,6 +590,9 @@ function App() {
     printWindow.document.close();
     printWindow.focus();
     printWindow.print();
+    if (activeSessionId) {
+      await supabase.from('photobooth_sessions').update({ print_count: 1 }).eq('id', activeSessionId);
+    }
   };
 
   const publishForQr = async () => {
@@ -572,6 +630,10 @@ function App() {
 
   if (authLoading || !session || !isSupabaseConfigured) {
     return <AuthScreen loading={authLoading} configError={isSupabaseConfigured ? null : supabaseConfigMessage} />;
+  }
+
+  if (window.location.pathname === '/admin' || window.location.pathname.startsWith('/admin/')) {
+    return <AdminDashboard session={session} onLogout={() => void supabase.auth.signOut()} />;
   }
 
   return (
