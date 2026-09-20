@@ -322,6 +322,13 @@ function App() {
   useEffect(() => {
     let isCurrent = true;
 
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (isCurrent) {
+        setSession(nextSession);
+        setAuthLoading(false);
+      }
+    });
+
     const restoreSession = async () => {
       if (!isSupabaseConfigured) {
         setAuthLoading(false);
@@ -336,10 +343,6 @@ function App() {
     };
 
     void restoreSession();
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setAuthLoading(false);
-    });
 
     return () => {
       isCurrent = false;
