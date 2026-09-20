@@ -10,16 +10,26 @@ export function useCamera() {
   const [error, setError] = useState<string | null>(null);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
 
+  const attachStream = (video: HTMLVideoElement | null, stream: MediaStream | null) => {
+    if (!video || !stream) return;
+    video.srcObject = stream;
+    video.muted = true;
+    video.playsInline = true;
+    const play = () => {
+      void video.play().catch(() => {
+        // Playback can be deferred until the browser finishes loading the stream metadata.
+      });
+    };
+    video.onloadedmetadata = play;
+    if (video.readyState >= HTMLMediaElement.HAVE_METADATA) play();
+  };
+
   if (!serviceRef.current) {
     serviceRef.current = new CameraService();
   }
 
   useEffect(() => {
-    if (status === 'ready' && videoElement && streamRef.current) {
-      videoElement.srcObject = streamRef.current;
-      videoElement.muted = true;
-      void videoElement.play();
-    }
+    if (status === 'ready') attachStream(videoElement, streamRef.current);
   }, [status, videoElement]);
 
   useEffect(() => {
@@ -60,6 +70,7 @@ export function useCamera() {
   const videoRefCallback = (element: HTMLVideoElement | null) => {
     videoRef.current = element;
     setVideoElement(element);
+    attachStream(element, streamRef.current);
   };
 
   return { videoRef, videoRefCallback, status, error, devices, ensureCamera, capture, stopCamera: () => serviceRef.current?.stopCamera() };
