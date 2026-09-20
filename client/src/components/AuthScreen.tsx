@@ -15,6 +15,7 @@ export function AuthScreen({ loading = false, configError = null }: AuthScreenPr
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [recoverySent, setRecoverySent] = useState(false);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -36,6 +37,18 @@ export function AuthScreen({ loading = false, configError = null }: AuthScreenPr
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const sendRecoveryEmail = async () => {
+    if (!email) {
+      setError('Enter your email address first.');
+      return;
+    }
+    setError(null);
+    setMessage(null);
+    const result = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` });
+    if (result.error) setError(result.error.message);
+    else { setRecoverySent(true); setMessage('Check your email for a password reset link.'); }
   };
 
   return (
@@ -60,6 +73,7 @@ export function AuthScreen({ loading = false, configError = null }: AuthScreenPr
         <button type="button" className="auth-switch" onClick={() => { setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in'); setError(null); setMessage(null); }}>
           {mode === 'sign-in' ? 'Need an account? Sign up' : 'Already have an account? Sign in'}
         </button>
+        {mode === 'sign-in' && <button type="button" className="auth-switch" disabled={recoverySent} onClick={() => void sendRecoveryEmail()}>{recoverySent ? 'Reset email sent' : 'Forgot your password?'}</button>}
       </section>
     </main>
   );

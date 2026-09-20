@@ -11,6 +11,7 @@ import { TemplateEditor } from './components/TemplateEditor';
 import { AuthScreen } from './components/AuthScreen';
 import { AdminDashboard } from './components/AdminDashboard';
 import { DownloadHistory } from './components/DownloadHistory';
+import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { isSupabaseConfigured, supabase, supabaseConfigMessage } from './utils/supabase';
 
 const workflowSteps = ['Event', 'Camera', 'Capture', 'Review', 'Print'];
@@ -691,7 +692,14 @@ function App() {
   };
 
   if (authLoading || !session || !isSupabaseConfigured) {
+    if (window.location.pathname === '/reset-password') {
+      return <ResetPasswordScreen session={session} loading={authLoading} />;
+    }
     return <AuthScreen loading={authLoading} configError={isSupabaseConfigured ? null : supabaseConfigMessage} />;
+  }
+
+  if (window.location.pathname === '/reset-password') {
+    return <ResetPasswordScreen session={session} />;
   }
 
   if (window.location.pathname === '/admin' || window.location.pathname.startsWith('/admin/')) {
