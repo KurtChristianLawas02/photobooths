@@ -1,15 +1,17 @@
 import { useState, type FormEvent } from 'react';
 import type { AuthError } from '@supabase/supabase-js';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, X } from 'lucide-react';
 import { supabase } from '../utils/supabase';
 
 interface AuthScreenProps {
   loading?: boolean;
   configError?: string | null;
+  initialMode?: 'sign-in' | 'sign-up';
+  onClose?: () => void;
 }
 
-export function AuthScreen({ loading = false, configError = null }: AuthScreenProps) {
-  const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
+export function AuthScreen({ loading = false, configError = null, initialMode = 'sign-in', onClose }: AuthScreenProps) {
+  const [mode, setMode] = useState<'sign-in' | 'sign-up'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,11 +53,9 @@ export function AuthScreen({ loading = false, configError = null }: AuthScreenPr
     else { setRecoverySent(true); setMessage('Check your email for a password reset link.'); }
   };
 
-  return (
-    <main className="booth-shell auth-shell">
-      <div className="ambient ambient-one" />
-      <div className="ambient ambient-two" />
-      <section className="auth-card" aria-labelledby="auth-title">
+  const authContent = (
+      <section className={`auth-card ${onClose ? 'auth-card-modal' : ''}`} aria-labelledby="auth-title">
+        {onClose && <button type="button" className="icon-button auth-close" aria-label="Close sign in" onClick={onClose}><X size={18} /></button>}
         <div className="brand-lockup auth-brand"><span className="brand-mark"><img src="/logo.svg" alt="Studio Booth logo" /></span><span>Studio Booth</span></div>
         <p className="eyebrow">Private photo studio</p>
         <h1 id="auth-title">{mode === 'sign-in' ? <>Welcome<br /><em>back.</em></> : <>Make it<br /><em>yours.</em></>}</h1>
@@ -75,6 +75,15 @@ export function AuthScreen({ loading = false, configError = null }: AuthScreenPr
         </button>
         {mode === 'sign-in' && <button type="button" className="auth-switch" disabled={recoverySent} onClick={() => void sendRecoveryEmail()}>{recoverySent ? 'Reset email sent' : 'Forgot your password?'}</button>}
       </section>
+  );
+
+  if (onClose) return authContent;
+
+  return (
+    <main className="booth-shell auth-shell">
+      <div className="ambient ambient-one" />
+      <div className="ambient ambient-two" />
+      {authContent}
     </main>
   );
 }

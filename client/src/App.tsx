@@ -28,7 +28,18 @@ const photoStyles = [
   { id: 'tailgate', name: 'Tailgate', description: 'Playful editorial event poster', layout: 'tailgate', theme: 'tailgate', filter: 'sepia(.08) saturate(1.06) contrast(1.04)', background: '#e7e4d2', accent: '#9d1721', title: 'THE GOOD TIMES', footer: 'PHOTO BOOTH EDITION' },
 ];
 
-type PhotoStyle = (typeof photoStyles)[number];
+interface PhotoStyle {
+  id: string;
+  name: string;
+  description: string;
+  layout: string;
+  theme: string;
+  filter: string;
+  background: string;
+  accent: string;
+  title: string;
+  footer: string;
+}
 
 function slot(id: string, x: number, y: number, width: number, height: number, photoIndex: number): PhotoSlot {
   return { id, type: 'photo', x, y, width, height, fit: 'cover', photoIndex };
@@ -184,6 +195,7 @@ function PhotoLayout({ photos, style, copies = 1, compact = false }: { photos: A
 
   return (
     <div className={`photo-layout ${compact ? 'compact' : ''}`} style={{ background: style.background, color: style.accent }}>
+      <div className="photo-layout-title">{style.title}</div>
       {Array.from({ length: copies }, (_, copyIndex) => (
         <div key={`copy-${copyIndex}`} className="photo-layout-copy">
           {previewPhotos.map((photo, index) => (
@@ -197,6 +209,7 @@ function PhotoLayout({ photos, style, copies = 1, compact = false }: { photos: A
           ))}
         </div>
       ))}
+      <div className="photo-layout-footer">{style.footer}</div>
     </div>
   );
 }
@@ -310,6 +323,13 @@ function App() {
   const [selectedPrintSize, setSelectedPrintSize] = useState<PrintSizeId>(settings.defaultPrintSize);
   const [selectedOrientation, setSelectedOrientation] = useState<Orientation>(settings.defaultOrientation);
   const [selectedStyle, setSelectedStyle] = useState('golden-strip');
+  const [customStyle, setCustomStyle] = useState<PhotoStyle>({
+    id: 'custom-user', name: 'My style', description: 'A look made by you.', layout: 'custom', theme: 'custom',
+    filter: 'none', background: '#172019', accent: '#d5c28b', title: 'A MOMENT TO KEEP', footer: 'MAKE IT YOURS',
+  });
+  const [showStyleEditor, setShowStyleEditor] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [retakePhotoId, setRetakePhotoId] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -382,6 +402,10 @@ function App() {
   }, [session, setSettings]);
 
   useEffect(() => {
+    if (session) setShowAuth(false);
+  }, [session]);
+
+  useEffect(() => {
     const allTemplates = [...templateSeed, ...namedFourBySixPresets, ...additionalTemplates];
     setTemplates(allTemplates);
     if (!selectedTemplateId && allTemplates[0]) {
@@ -450,6 +474,7 @@ function App() {
 
   const availableStyles = useMemo<PhotoStyle[]>(
     () => [
+      customStyle,
       ...templates.map((template) => ({
         id: `template-style-${template.id}`,
         name: template.name,
@@ -464,7 +489,7 @@ function App() {
       })),
       ...photoStyles,
     ],
-    [templates],
+    [customStyle, templates],
   );
 
   useEffect(() => {
@@ -494,15 +519,17 @@ function App() {
     setIsPreparing(true);
     try {
       await ensureCamera(selectedDeviceId || undefined, cameraFacingMode);
-      const { data: boothSession, error: sessionError } = await supabase
-        .from('photobooth_sessions')
-        .insert({ user_id: session?.user.id, template_id: activeTemplate.id, status: 'capturing' })
-        .select('id')
-        .single();
-      if (sessionError) {
-        console.error('Could not record booth session:', sessionError);
-      } else {
-        setActiveSessionId(boothSession.id as string);
+      if (session && isSupabaseConfigured) {
+        const { data: boothSession, error: sessionError } = await supabase
+          .from('photobooth_sessions')
+          .insert({ user_id: session.user.id, template_id: activeTemplate.id, status: 'capturing' })
+          .select('id')
+          .single();
+        if (sessionError) {
+          console.error('Could not record booth session:', sessionError);
+        } else {
+          setActiveSessionId(boothSession.id as string);
+        }
       }
       setStep('session');
     } catch (captureError) {
@@ -604,7 +631,7 @@ function App() {
     link.href = styledLayout;
     link.download = `${settings.businessName.toLowerCase().replace(/\s+/g, '-')}-${activeStyle.id}.${settings.outputFormat}`;
     link.click();
-    try {
+    if (session && activeSessionId && isSupabaseConfigured) try {
       const imageBlob = await (await fetch(styledLayout)).blob();
       const storagePath = `${session?.user.id}/${Date.now()}-${link.download}`;
       const uploadResult = await supabase.storage.from('photobooth-downloads').upload(storagePath, imageBlob, { contentType: `image/${settings.outputFormat === 'jpeg' ? 'jpeg' : 'png'}`, upsert: false });
@@ -694,22 +721,17 @@ function App() {
     setShowSettings(false);
   };
 
-  if (authLoading || !session || !isSupabaseConfigured) {
-    if (window.location.pathname === '/reset-password') {
-      return <ResetPasswordScreen session={session} loading={authLoading} />;
-    }
-    return <AuthScreen loading={authLoading} configError={isSupabaseConfigured ? null : supabaseConfigMessage} />;
-  }
-
   if (window.location.pathname === '/reset-password') {
     return <ResetPasswordScreen session={session} />;
   }
 
   if (window.location.pathname === '/admin' || window.location.pathname.startsWith('/admin/')) {
+    if (authLoading || !session || !isSupabaseConfigured) return <AuthScreen loading={authLoading} configError={isSupabaseConfigured ? null : supabaseConfigMessage} />;
     return <AdminDashboard session={session} onLogout={() => void supabase.auth.signOut()} />;
   }
 
   if (window.location.pathname === '/downloads') {
+    if (authLoading || !session || !isSupabaseConfigured) return <AuthScreen loading={authLoading} configError={isSupabaseConfigured ? null : supabaseConfigMessage} />;
     return <DownloadHistory session={session} onLogout={() => void supabase.auth.signOut()} />;
   }
 
@@ -724,9 +746,14 @@ function App() {
         </div>
         <div className="topbar-actions">
           <button className="icon-button" aria-label="Enter fullscreen" onClick={() => document.documentElement.requestFullscreen?.()}><Maximize size={20} /></button>
-          <button className="icon-button" aria-label="View recent downloads" onClick={() => window.location.assign('/downloads')}><Download size={20} /></button>
-          <button className="icon-button" aria-label="Open settings" onClick={() => setShowSettings(true)}><Settings2 size={20} /></button>
-          <button className="icon-button" aria-label="Sign out" onClick={() => void supabase.auth.signOut()}><LogOut size={20} /></button>
+          {session ? <>
+            <button className="icon-button" aria-label="View recent downloads" onClick={() => window.location.assign('/downloads')}><Download size={20} /></button>
+            <button className="icon-button" aria-label="Open settings" onClick={() => setShowSettings(true)}><Settings2 size={20} /></button>
+            <button className="icon-button" aria-label="Sign out" onClick={() => void supabase.auth.signOut()}><LogOut size={20} /></button>
+          </> : <>
+            <button type="button" className="secondary-button account-button" onClick={() => { setAuthMode('sign-in'); setShowAuth(true); }}>Log in</button>
+            <button type="button" className="primary-button account-button" onClick={() => { setAuthMode('sign-up'); setShowAuth(true); }}>Sign up</button>
+          </>}
         </div>
       </header>
 
@@ -856,6 +883,21 @@ function App() {
               ))}
             </div>
           </div>
+          <section className="custom-style-area" aria-label="Create a photo style">
+            <button type="button" className="secondary-button custom-style-toggle" onClick={() => { setShowStyleEditor(!showStyleEditor); setSelectedStyle(customStyle.id); }}>
+              <Sparkles size={18} /> {showStyleEditor ? 'Close style editor' : 'Create your own style'}
+            </button>
+            {showStyleEditor && <div className="custom-style-editor">
+              <label className="setting-field">Style name<input value={customStyle.name} maxLength={32} onChange={(event) => setCustomStyle({ ...customStyle, name: event.target.value || 'My style' })} /></label>
+              <label className="setting-field">Photo filter<select value={customStyle.filter} onChange={(event) => setCustomStyle({ ...customStyle, filter: event.target.value })}>
+                <option value="none">Natural</option><option value="sepia(.18) saturate(1.14) contrast(1.06)">Golden</option><option value="grayscale(1) contrast(1.08)">Black and white</option><option value="saturate(1.28) contrast(1.12)">Vivid</option><option value="sepia(.3) saturate(.82) contrast(1.12)">Vintage</option>
+              </select></label>
+              <label className="setting-field">Background color<input type="color" value={customStyle.background} onChange={(event) => setCustomStyle({ ...customStyle, background: event.target.value })} /></label>
+              <label className="setting-field">Text color<input type="color" value={customStyle.accent} onChange={(event) => setCustomStyle({ ...customStyle, accent: event.target.value })} /></label>
+              <label className="setting-field">Heading<input value={customStyle.title} maxLength={48} onChange={(event) => setCustomStyle({ ...customStyle, title: event.target.value })} /></label>
+              <label className="setting-field">Footer<input value={customStyle.footer} maxLength={48} onChange={(event) => setCustomStyle({ ...customStyle, footer: event.target.value })} /></label>
+            </div>}
+          </section>
           <div className="review-grid">
             <PhotoLayout photos={photos} style={activeStyle} copies={activeTemplate?.printSize === '2x6' ? 1 : 2} />
             <div className="retake-list" aria-label="Retake captured photos">
@@ -889,6 +931,14 @@ function App() {
             {qrCode && <div className="qr-result"><img src={qrCode} alt="QR code for your high-resolution photo" /><span>Scan to open your high-resolution photo</span></div>}
           </div>
         </section>
+      )}
+
+      {showAuth && !session && (
+        <div className="modal-backdrop auth-backdrop" role="presentation" onClick={() => setShowAuth(false)}>
+          <div className="auth-dialog" role="dialog" aria-modal="true" aria-label={authMode === 'sign-in' ? 'Log in' : 'Sign up'} onClick={(event) => event.stopPropagation()}>
+            <AuthScreen key={authMode} initialMode={authMode} onClose={() => setShowAuth(false)} configError={isSupabaseConfigured ? null : supabaseConfigMessage} />
+          </div>
+        </div>
       )}
 
       {showSettings && (
